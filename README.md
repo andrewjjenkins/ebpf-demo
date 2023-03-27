@@ -1,93 +1,70 @@
-1. Install rasbpi (debian) image to SD card:
 
-https://raspi.debian.net/tested-images/
+# Introduction
 
-This is tested on a Raspberry Pi 4 version B.  It should work on any of the
-Raspberry Pi systems where the CPU and raspi are 64-bit, which is everything
-Raspberry Pi 3 and later.
+This is the source code for a demo of eBPF.
 
-Your SD card must be at least 8GB.
+The demo is based around a performance problem that is difficult to diagnose
+with many traditional performance/monitoring tools.  We use eBPF and BCC (a
+toolchain for eBPF) to diagnose it.
 
-I used https://raspi.debian.net/tested/20230102_raspi_4_bullseye.img.xz , which
-was the most recent from the bullseye release for raspi 4 at the time of writing.
+# Setup
 
+## Pre-requisites
 
-2. Do initial headless setup (optional)
+You will need a linux system with about 22GiB of disk space, 4 GB of memory, 2
+CPUs.  A VM is great.
 
-You can either connect a monitor and keyboard and do initial setup that way, or
-you can bootstrap so you can do it over the network.  This step describes how to
-bootstrap it.  You will need a wired network connection.
+These instructions are tested on `amd64`; eBPF works on other architectures but
+there are some differences in which hooks are exposed.  I believe this demo
+works on other architectures but have not tried.
 
-You need to edit the file `sysconf.txt` on the `RASPIFIRM` volume on the SD card.
-
-If you can't find the `RASPIFIRM` volume, you may need to eject and re-insert
-the SD card to get your host operating system to re-read the card and mount the
-RASPIFIRM volume.
-
-Set the hostname and root_pw fields, below are examples.
+You need a linux system running a relatively recent kernel with eBPF enabled.  I
+tested Ubuntu 22.04, but Ubuntu 20.04 is probably fine.  
+Not all kernels enable eBPF; one way to check is to grep the kernel config for
+BPF.
 
 ```
-root_pw=changeme
-hostname=ebpf-pi
+grep "BPF" /lib/modules/$(uname -r)/build/.config
+
+# If that doesn't work, try this.  "modprobe configs" may or may not be
+# required; if it fails, try checking the /proc/config.gz file anyway
+modprobe configs
+cat /proc/config.gz | gunzip | grep "BPF"
 ```
 
-3. Boot Raspberry Pi
-
-Put the SD card into the raspberry pi and boot it.  The first boot may take a
-minute or so.  You need to find the IP address of the raspberry pi; you may be
-able to do this via your router.
-
-SSH into the raspberry pi, using the password you configured:
+For this demo, you'll need `CONFIG_BPF`, `CONFIG_HAVE_EBPF_JIT`,
+`CONFIG_BPF_JIT`, `CONFIG_BPF_SYSCALL`, `CONFIG_BPF_EVENTS`.  Here's the output on my demo system:
 
 ```
-ssh root@<ip-address>
-Password: changeme
-root@ebpf-pi:~#
+CONFIG_BPF=y
+CONFIG_HAVE_EBPF_JIT=y
+CONFIG_ARCH_WANT_DEFAULT_BPF_JIT=y
+# BPF subsystem
+CONFIG_BPF_SYSCALL=y
+CONFIG_BPF_JIT=y
+CONFIG_BPF_JIT_ALWAYS_ON=y
+CONFIG_BPF_JIT_DEFAULT_ON=y
+CONFIG_BPF_UNPRIV_DEFAULT_OFF=y
+# CONFIG_BPF_PRELOAD is not set
+CONFIG_BPF_LSM=y
+# end of BPF subsystem
+CONFIG_CGROUP_BPF=y
+CONFIG_IPV6_SEG6_BPF=y
+CONFIG_NETFILTER_XT_MATCH_BPF=m
+CONFIG_BPFILTER=y
+CONFIG_BPFILTER_UMH=m
+CONFIG_NET_CLS_BPF=m
+CONFIG_NET_ACT_BPF=m
+CONFIG_BPF_STREAM_PARSER=y
+CONFIG_LWTUNNEL_BPF=y
+CONFIG_BPF_EVENTS=y
+CONFIG_BPF_KPROBE_OVERRIDE=y
+CONFIG_TEST_BPF=m
 ```
 
-4. Initial setup
+## Install BCC from source
 
-I add a non-root user `andrew` below; feel free to replace with whatever
-username you'd like. I also install some utilities, this is optional but I find
-linux unliveable without them.
-
-```
-apt-get update
-apt-get dist-upgrade -y
-apt-get install sudo git build-essential lm-sensors
-# The remaining lines are optional
-apt-get install vim tmux direnv bash-completion htop
-adduser andrew 
-passwd andrew
-  <set any password you want>
-adduser andrew sudo
-```
-
-The dist-upgrade probably installed a new kernel for you.  You should reboot
-before we bother trying to build bcc.
-
-```
-reboot
-```
-
-The rest of the instructions will assume you are logged in as the non-root user
-(`andrew` in my example), and will use sudo when needed.  If you didn't make a
-non-root user and you're doing everything as root, the extra sudo in the
-commands below won't hurt.
-
-5. Build a kernel
-
-```
-echo "deb-src http://deb.debian.org/debian bullseye main non-free" | sudo tee -a /etc/apt/sources.list
-echo "deb-src http://deb.debian.org/debian bullseye-updates main non-free" | sudo tee -a /etc/apt/sources.list
-echo "deb-src http://security.debian.org/debian-security bullseye-security main non-free" | sudo tee -a /etc/apt/sources.list
-sudo apt-get update
-sudo apt-get install fakeroot
-sudo apt-get build-dep linux
-```
-
-
-5. Install BCC compile-time dependencies
+Install all the dependencies to build BCC:
 
 ```
 sudo apt-get install arping bison clang-format cmake dh-python \
@@ -97,8 +74,6 @@ sudo apt-get install arping bison clang-format cmake dh-python \
   luajit python3-netaddr python3-pyroute2 python3-distutils python3 \
   liblzma-dev libdebuginfod-dev zip linux-headers-$(uname -r)
 ```
-
-6. Build BCC
 
 ```
 git clone git@github.com:iovisor/bcc.git
@@ -115,8 +90,8 @@ should be looking for a lot of "Success" and no errors.
 
 ```
 $ cmake ..
--- The C compiler identification is GNU 10.2.1
--- The CXX compiler identification is GNU 10.2.1
+-- The C compiler identification is GNU 11.3.0
+-- The CXX compiler identification is GNU 11.3.0
 -- Detecting C compiler ABI info
 -- Detecting C compiler ABI info - done
 -- Check for working C compiler: /usr/bin/cc - skipped
@@ -127,19 +102,6 @@ $ cmake ..
 -- Check for working CXX compiler: /usr/bin/c++ - skipped
 -- Detecting CXX compile features
 -- Detecting CXX compile features - done
-Submodule 'libbpf-tools/blazesym' (https://github.com/libbpf/blazesym) registered for path 'libbpf-tools/blazesym'
-Cloning into '/home/andrew/ebpf/bcc/libbpf-tools/blazesym'...
-Warning: Permanently added the ECDSA host key for IP address '140.82.113.3' to the list of known hosts.
-Submodule path 'libbpf-tools/blazesym': checked out 'd954f73867527dc75025802160c759d0b6a0641f'
-Submodule 'libbpf-tools/bpftool' (https://github.com/libbpf/bpftool) registered for path 'libbpf-tools/bpftool'
-Submodule 'src/cc/libbpf' (https://github.com/libbpf/libbpf.git) registered for path 'src/cc/libbpf'
-Cloning into '/home/andrew/ebpf/bcc/libbpf-tools/bpftool'...
-Cloning into '/home/andrew/ebpf/bcc/src/cc/libbpf'...
-Submodule path 'libbpf-tools/bpftool': checked out '6eb3e20583da834da18ea3011dcefd08b3493f8d'
-Submodule 'libbpf' (https://github.com/libbpf/libbpf.git) registered for path 'libbpf-tools/bpftool/libbpf'
-Cloning into '/home/andrew/ebpf/bcc/libbpf-tools/bpftool/libbpf'...
-Submodule path 'libbpf-tools/bpftool/libbpf': checked out '7984737fbf3b2a14a86321387bb62abb16cfc4ed'
-Submodule path 'src/cc/libbpf': checked out 'ea284299025bf85b85b4923191de6463cd43ccd6'
 -- Latest recognized Git tag is v0.26.0
 -- Git HEAD is 594ab9a9b0e3dfa7cf8fc7f28923ba0eb33a5c66
 -- Revision is 0.26.0+594ab9a9 (major 0, minor 26, patch 0)
@@ -147,18 +109,26 @@ Submodule path 'src/cc/libbpf': checked out 'ea284299025bf85b85b4923191de6463cd4
 -- Performing Test HAVE_NO_PIE_FLAG - Success
 -- Performing Test HAVE_REALLOCARRAY_SUPPORT
 -- Performing Test HAVE_REALLOCARRAY_SUPPORT - Success
--- Kernel release: 5.10.0-21-arm64
--- Kernel headers: KERNELHEADERS_DIR-NOTFOUND
--- Found LLVM: /usr/lib/llvm-11/include 11.0.1 (Use LLVM_ROOT envronment variable for another version of LLVM)
--- Found BISON: /usr/bin/bison (found version "3.7.5")
+-- Kernel release: 5.15.0-69-generic
+-- Kernel headers: /usr/src/linux-headers-5.15.0-69-generic
+-- Performing Test HAVE_FFI_CALL
+-- Performing Test HAVE_FFI_CALL - Success
+-- Found FFI: /usr/lib/x86_64-linux-gnu/libffi.so
+-- Performing Test Terminfo_LINKABLE
+-- Performing Test Terminfo_LINKABLE - Success
+-- Found Terminfo: /usr/lib/x86_64-linux-gnu/libtinfo.so
+-- Found ZLIB: /usr/lib/x86_64-linux-gnu/libz.so (found version "1.2.11")
+-- Found LibXml2: /usr/lib/x86_64-linux-gnu/libxml2.so (found version "2.9.13")
+-- Found LLVM: /usr/lib/llvm-14/include 14.0.0 (Use LLVM_ROOT envronment variable for another version of LLVM)
+-- Found BISON: /usr/bin/bison (found version "3.8.2")
 -- Found FLEX: /usr/bin/flex (found version "2.6.4")
--- Found LibElf: /usr/lib/aarch64-linux-gnu/libelf.so
+-- Found LibElf: /usr/lib/x86_64-linux-gnu/libelf.so
 -- Performing Test ELF_GETSHDRSTRNDX
 -- Performing Test ELF_GETSHDRSTRNDX - Success
--- Found LibDebuginfod: /usr/lib/aarch64-linux-gnu/libdebuginfod.so
--- Found LibLzma: /usr/lib/aarch64-linux-gnu/liblzma.so
+-- Found LibDebuginfod: /usr/lib/x86_64-linux-gnu/libdebuginfod.so
+-- Found LibLzma: /usr/lib/x86_64-linux-gnu/liblzma.so
 -- Using static-libstdc++
--- Found LuaJIT: /usr/lib/aarch64-linux-gnu/libluajit-5.1.a;/usr/lib/aarch64-linux-gnu/libdl.so;/usr/lib/aarch64-linux-gnu/libm.so
+-- Found LuaJIT: /usr/lib/x86_64-linux-gnu/libluajit-5.1.a;/usr/lib/x86_64-linux-gnu/libdl.a;/usr/lib/x86_64-linux-gnu/libm.so
 CMake Warning at tests/python/CMakeLists.txt:10 (message):
   Recommended test program 'netperf' not found
 
@@ -168,9 +138,9 @@ CMake Warning at tests/python/CMakeLists.txt:10 (message):
 -- Build files have been written to: /home/andrew/ebpf/bcc/build
 ```
 
-The `make` step takes about 10 minutes or so on a Raspberry Pi 4.
+The `make` step may take a few minutes.
 
-7. Test BCC
+## Test BCC
 
 Test that everything is working by running an example.
 
@@ -184,7 +154,7 @@ make a new terminal if you are in tmux).
 sudo examples/cpp/HelloWorld
 ```
 
-8. Install prometheus, grafana, node-exporter
+## Install prometheus, grafana, node-exporter
 
 ```
 sudo snap install prometheus
@@ -203,4 +173,53 @@ Go to settings -> data sources, add Prometheus.  Server name is `http://localhos
 
 Go to Dashboards -> Import, and import ID# `1860`.  Set the Data Source to "Prometheus" and import.
 
+## Install demo tools
+
+```
+sudo apt-get install htop hey nginx
+```
+
+## Build badly-performing app
+In this directory:
+
+```
+make
+```
+
+# Demo
+
+## Happy state
+
+Open http://localhost:3000 , sign in (admin/admin), then go to the Node Exporter
+Full dashboard.  Set the timeframe to "Last 15 minutes" and the refresh rate to
+"10s" (top-right).
+
+Start `htop`:
+
+```
+htop
+```
+
+In another terminal, start `hey` loading down NGINX.  You want the total load to
+in htop to be about 50% (adjust `-q`; somewhere between 30% and 70% is fine, it
+may bounce around).
+
+```
+hey -n 1000000000000 -cpus 2 -q 80 http://localhost
+```
+
+This represents a happy web server.  It's not fully loaded, but it's not idle.
+The top processes in htop are probably `hey` and `nginx: worker process`.
+
+![Screenshot of htop, showing hey and nginx and about 50% load](/images/happy-server-htop.gif)
+
+In Grafana, you can see 50% of CPU being consumed:
+
+![Screenshot of grafana, showing about 50% load](/images/happy-server-grafana.gif)
+
+
+
+## Start what?
+
+Now let's start the unknown perf-killing process.
 
