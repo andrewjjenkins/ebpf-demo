@@ -207,19 +207,56 @@ may bounce around).
 ```
 hey -n 1000000000000 -cpus 2 -q 80 http://localhost
 ```
-
 This represents a happy web server.  It's not fully loaded, but it's not idle.
-The top processes in htop are probably `hey` and `nginx: worker process`.
-
-![Screenshot of htop, showing hey and nginx and about 50% load](/images/happy-server-htop.gif)
-
 In Grafana, you can see 50% of CPU being consumed:
 
 ![Screenshot of grafana, showing about 50% load](/images/happy-server-grafana.png)
 
+The top processes in htop are probably `hey` and `nginx: worker process`.
+
+![Screenshot of htop, showing hey and nginx and about 50% load](/images/happy-server-htop.gif)
 
 
 ## Start what?
 
 Now let's start the unknown perf-killing process.
 
+```
+make && ./what
+```
+
+Now you can see grafana showing an overloaded system; 100% CPU utilization and
+more than 200% system load:
+
+![Screenshot of grafana, showing 100% load](/images/sad-server-grafana.png)
+
+You can see that CPU goes to 100% in htop (on both cores).  But the listing of
+top CPU users is still mostly `nginx` and `hey`.  A couple of things in `/bin/`
+show up but they're only using 5% or less of CPU, and they're gone as quickly as
+they arrive.  Sometimes you can catch a persistent CPU user by sorting by CPU
+time instead of short-term CPU usage but if you try it, it doesn't help (wait in
+the GIF for a bit).
+
+![Screenshot of htop](/images/sad-server-htop.gif)
+
+## So what?
+
+What's happening?  Well, we did notice these weird things in `/bin` that we
+haven't seen before.  And if you look in grafana, you'll notice a much higher
+than typical number of process forks:
+
+![Screenshot of grafana showing high forks](/images/forks-grafana.png)
+
+## Digging deeper
+
+These processes are really short-lived so it is hard to learn much about them.
+We don't recognize them, and it can be hard to figure out what they are, who
+their parent is, and if they even represent a problem.  But we're surprised by
+the number of forks.
+
+We can write and run a simple eBPF program [forktop.py](/forktop.py) to track
+which processes are forking each second:
+
+![Screenshot of forktop showing high forks from what](/images/forktop.gif)
+
+This shows the culprit: `what` is forking about 10 times a second, every second.
