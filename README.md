@@ -215,7 +215,7 @@ The top processes in htop are probably `hey` and `nginx: worker process`.
 
 In Grafana, you can see 50% of CPU being consumed:
 
-![Screenshot of grafana, showing about 50% load](/images/happy-server-grafana.gif)
+![Screenshot of grafana, showing about 50% load](/images/happy-server-grafana.png)
 
 
 
