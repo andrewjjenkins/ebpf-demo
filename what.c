@@ -110,7 +110,7 @@ int main(int argc, char *argv[]) {
     }
 
     struct sigaction sa_chld;
-    //bzero(&sa_chld, sizeof(sa_chld));
+    bzero(&sa_chld, sizeof(sa_chld));
     sa_chld.sa_flags = SA_SIGINFO;
     sa_chld.sa_sigaction = sigchld_handler;
     sigemptyset(&sa_chld.sa_mask);
