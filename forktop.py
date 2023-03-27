@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# @lint-avoid-python-3-compatibility-imports
 #
 # forktop Count which processes are forking the most.
 #
