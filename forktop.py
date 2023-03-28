@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # forktop Count which processes are forking the most.
 #
@@ -11,6 +11,9 @@
 
 from bcc import BPF
 from time import sleep, strftime
+from itertools import islice
+from binascii import hexlify
+from sys import argv
 
 # load BPF program
 b = BPF(text="""
@@ -28,6 +31,12 @@ int kprobe__sched_fork(
     return 0;
 }
 """)
+
+if len(argv) >= 2 and argv[1] == "--dump":
+    print("Dump of kprobe__sched_fork:")
+    g = b.dump_func('kprobe__sched_fork')
+    for s in [g[i:i+8] for i in range(0, len(g), 8)]:
+        print(hexlify(s))
 
 # Python code: a big loop that reads the eBPF outputs:
 #   - forks: A BPF_HASH() table
