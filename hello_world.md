@@ -29,37 +29,37 @@ My Hello World:
 ```
 (gdb) disas /r  0xffffffffc0165d80, 0xffffffffc0165dfc
 Dump of assembler code from 0xffffffffc0165d80 to 0xffffffffc0165dfc:
-   0xffffffffc0165d80:  cc                      int3
-   0xffffffffc0165d81:  cc                      int3
-   0xffffffffc0165d82:  cc                      int3
-   0xffffffffc0165d83:  cc                      int3
-   0xffffffffc0165d84:  0f 1f 44 00 00          nopl   0x0(%rax,%rax,1)
-   0xffffffffc0165d89:  66 90                   xchg   %ax,%ax
-   0xffffffffc0165d8b:  55                      push   %rbp
-   0xffffffffc0165d8c:  48 89 e5                mov    %rsp,%rbp
-   0xffffffffc0165d8f:  48 81 ec 30 00 00 00    sub    $0x30,%rsp
-   0xffffffffc0165d96:  bf 6c 21 0a 00          mov    $0xa216c,%edi
-   0xffffffffc0165d9b:  89 7d f8                mov    %edi,-0x8(%rbp)
+   0xffffffffc0165d80:  cc                              int3
+   0xffffffffc0165d81:  cc                              int3
+   0xffffffffc0165d82:  cc                              int3
+   0xffffffffc0165d83:  cc                              int3
+   0xffffffffc0165d84:  0f 1f 44 00 00                  nopl   0x0(%rax,%rax,1)
+   0xffffffffc0165d89:  66 90                           xchg   %ax,%ax
+   0xffffffffc0165d8b:  55                              push   %rbp
+   0xffffffffc0165d8c:  48 89 e5                        mov    %rsp,%rbp
+   0xffffffffc0165d8f:  48 81 ec 30 00 00 00            sub    $0x30,%rsp
+   0xffffffffc0165d96:  bf 6c 21 0a 00                  mov    $0xa216c,%edi
+   0xffffffffc0165d9b:  89 7d f8                        mov    %edi,-0x8(%rbp)
    0xffffffffc0165d9e:  48 bf 6c 6f 6e 65 20 63 61 6c   movabs $0x6c616320656e6f6c,%rdi
-   0xffffffffc0165da8:  48 89 7d f0             mov    %rdi,-0x10(%rbp)
+   0xffffffffc0165da8:  48 89 7d f0                     mov    %rdi,-0x10(%rbp)
    0xffffffffc0165dac:  48 bf 20 61 20 73 79 73 5f 63   movabs $0x635f737973206120,%rdi
-   0xffffffffc0165db6:  48 89 7d e8             mov    %rdi,-0x18(%rbp)
+   0xffffffffc0165db6:  48 89 7d e8                     mov    %rdi,-0x18(%rbp)
    0xffffffffc0165dba:  48 bf 72 65 20 49 20 64 69 64   movabs $0x6469642049206572,%rdi
-   0xffffffffc0165dc4:  48 89 7d e0             mov    %rdi,-0x20(%rbp)
+   0xffffffffc0165dc4:  48 89 7d e0                     mov    %rdi,-0x20(%rbp)
    0xffffffffc0165dc8:  48 bf 6f 72 6c 64 21 20 48 65   movabs $0x65482021646c726f,%rdi
-   0xffffffffc0165dd2:  48 89 7d d8             mov    %rdi,-0x28(%rbp)
+   0xffffffffc0165dd2:  48 89 7d d8                     mov    %rdi,-0x28(%rbp)
    0xffffffffc0165dd6:  48 bf 48 65 6c 6c 6f 2c 20 57   movabs $0x57202c6f6c6c6548,%rdi
-   0xffffffffc0165de0:  48 89 7d d0             mov    %rdi,-0x30(%rbp)
-   0xffffffffc0165de4:  48 89 ef                mov    %rbp,%rdi
-   0xffffffffc0165de7:  48 83 c7 d0             add    $0xffffffffffffffd0,%rdi
-   0xffffffffc0165deb:  be 2c 00 00 00          mov    $0x2c,%esi
-   0xffffffffc0165df0:  e8 6b 4a ff c0          callq  0xffffffff8115a860 <bpf_trace_printk>
-   0xffffffffc0165df5:  31 c0                   xor    %eax,%eax
-   0xffffffffc0165df7:  c9                      leaveq
-   0xffffffffc0165df8:  c3                      retq
-   0xffffffffc0165df9:  cc                      int3
-   0xffffffffc0165dfa:  cc                      int3
-   0xffffffffc0165dfb:  cc                      int3
+   0xffffffffc0165de0:  48 89 7d d0                     mov    %rdi,-0x30(%rbp)
+   0xffffffffc0165de4:  48 89 ef                        mov    %rbp,%rdi
+   0xffffffffc0165de7:  48 83 c7 d0                     add    $0xffffffffffffffd0,%rdi
+   0xffffffffc0165deb:  be 2c 00 00 00                  mov    $0x2c,%esi
+   0xffffffffc0165df0:  e8 6b 4a ff c0                  callq  0xffffffff8115a860 <bpf_trace_printk>
+   0xffffffffc0165df5:  31 c0                           xor    %eax,%eax
+   0xffffffffc0165df7:  c9                              leaveq
+   0xffffffffc0165df8:  c3                              retq
+   0xffffffffc0165df9:  cc                              int3
+   0xffffffffc0165dfa:  cc                              int3
+   0xffffffffc0165dfb:  cc                              int3
 ```
 
 
