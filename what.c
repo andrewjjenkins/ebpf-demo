@@ -123,9 +123,6 @@ int main(int argc, char *argv[]) {
         exit(1);
     }
 
-    chooseNewName();
-    strcpy(*argvZero, newName);
-
     for (int i = 0; i < NUM_WORKERS; ++i) {
         spawnChild(i);
     }
