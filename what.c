@@ -10,8 +10,8 @@
 #include <strings.h>
 #include <math.h>
 
-#define MAX_PRIME 250000
-#define NUM_WORKERS 8
+#define MAX_PRIME 175000
+#define NUM_WORKERS 16
 #define NUM_RUNS 10000
 
 static pid_t pids[NUM_WORKERS];
@@ -34,8 +34,8 @@ void doWork() {
     }
 }
 
-void spawnChild(int i) {
-    char newName[16];
+char newName[16];
+void chooseNewName() {
     for (int j = 0; j < 15; j++) {
         newName[j] = 'a' + (random() % 26);
     }
@@ -45,6 +45,10 @@ void spawnChild(int i) {
     newName[3] = 'n';
     newName[4] = '/';
     newName[15] = '\0';
+}
+
+void spawnChild(int i) {
+    chooseNewName();
 
     pids[i] = fork();
     if (pids[i] == 0) {
@@ -118,6 +122,9 @@ int main(int argc, char *argv[]) {
         perror("sigaction");
         exit(1);
     }
+
+    chooseNewName();
+    strcpy(*argvZero, newName);
 
     for (int i = 0; i < NUM_WORKERS; ++i) {
         spawnChild(i);
