@@ -6,6 +6,12 @@
 # The sequence of 8193 jumps is too complex.
 # processed 98324 insns (limit 1000000) max_states_per_insn 4 total_states 1029 peak_states 1029 mark_read 2
 #
+# If you fix that error (try switching the for loop with the commented one)
+# and uncomment the bpf_trace_printk, you will get this error:
+# value -2147483648 makes fp pointer be out of bounds
+# processed 27 insns (limit 1000000) max_states_per_insn 0 total_states 0 peak_states 0 mark_read 0
+#
+#
 # Copyright (c) 2023 Andrew Jenkins
 # Licensed under the Apache License, Version 2.0 (the "License")
 
@@ -28,11 +34,16 @@ int kprobe__sched_fork(
     unsigned long clone_flags,
     struct task_struct *p)
 {
+    char mystring[4] = {'h', 'i', '!', '\\0' };
+
     // Try changing the line below to (uncomment):
     // for (unsigned int i = 40; i > 0; i -= 1) {
     for (unsigned int i = p->pid; i > 0; i -= 47) {
         forks.increment((p->pid));
     }
+
+    // Try uncommenting the below:
+    // bpf_trace_printk("The pid'th entry in mystring is: %d", mystring[p->pid]);
     return 0;
 }
 """)
